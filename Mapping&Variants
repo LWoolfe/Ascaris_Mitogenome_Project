@@ -1,0 +1,69 @@
+# Analysis of population structure of Ascaris sp.  
+
+## Table of contents
+0. [Project overview](#overview)
+1. [Project setup](#setup)
+2. [Raw data](#raw)
+3. [Mapping](#mapping)
+4. [Variant calling](#variantcalling)
+5. [Quality control](#qc)
+
+## 00 - Project overview
+
+The aim of this work is to analyse the population structure Ascaris sp. using publicly available WGS reads and newly synthesised data across diverse geographical regions and from both human and porcine hosts. 
+
+## 01 - Project setup 
+### Setup a working environment for the analysis.
+mkdir Pop_gen
+cd Pop_gen
+
+# make working directories
+mkdir 00_METADATA 01-reference 02-raw_sequences 03-mapping 04-variants 05-QC 06-analysis
+```
+## 02-raw_sequences
+# Download publicly available WGS reads using SRA toolkit
+
+# Trim and perform fastqc on all data 
+
+fastp 
+fast qc 
+multiqc
+
+cd 01_REFERENCES
+# Download the A. suum reference genome on ncbi using SRA Toolkit 
+prefetch GCA_013433145.1
+# Validate the downloaded genome 
+vdb-validate GCA_013433145.1
+# Unzip
+gunzip GCA_013433145.1_ASM1343314V1_genomic.fa.gz
+
+# Exclude unmapped scaffolds (include only primary scaffolds)
+seqtk subseq GCA_013433145.1_ASM1343314V1_genomic.fa <(grep "Retained" ${WORKING_DIR}/00_METADATA/supplementary_data_11.txt | cut -f1 | cat) | cut -f1 -d " " > As_nohap.fa
+
+# Create indexes and a sequence dictionary for the reference genome
+bwa index As_nohap.fa
+samtools faidx As_nohap.fafsu
+gatk CreateSequenceDictionary --REFERENCE As_nohap.fa
+
+## 03 - Mapping <a name="mapping"></a>
+### Download sequence reads
+```
+```
+### Map sequence reads to reference genome
+```
+cd 03-mapping
+
+
+
+bwa mem -t 6 ${WORKING_DIR}/01_REFERENCEGENOME /As_nohap.fa {$samplenumber}_1.fastq.gz {$samplenumber}_2.fastq.gz | samtools sort -@6 -o {$samplenumber}.bam -
+```
+### Mark PCR duplicates
+```
+parallel --dry-run --colsep '\t' "gatk MarkDuplicates --INPUT {1}.bam --OUTPUT {1}.markdup.bam --METRICS_FILE {1}.metrics.txt" :::: <(cat ${WORKING_DIR}/00_METADATA/suppdata.txt | grep "gz" | cut -f1)
+```
+The parallel command will write each markduplicate command to screen, this will create a MarkDuplicates command with set arguments to run separately or as a batch on cluster. It will name the output bam file with the sample name example:
+```
+gatk MarkDuplicates --INPUT {$samplenumber}.bam --OUTPUT {$samplenumber}.markdup.bam --METRICS_FILE {$samplenumber}.metrics.txt
+
+# Index all BAM files
+parallel -j1 --colsep '\t' "samtools index {1}.markdup.bam" <(cat ${WORKING_DIR}/00_METADATA/suppdata.txt | grep "gz")
