@@ -1,0 +1,43 @@
+##Creation of a tanglegram showing the differences in tree topology between the nucleic acid and amino acid phylogenomic trees. 
+setwed(path/to/workingdirectory)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr) 
+
+# After creating each phylogenetic tree, you should have a file that was downloaded as below, containing a list of the samples. Open this file and assign the order of the samples from 1-167 in a new column.
+write.csv(data.frame(TipLabel = ordered_tips), 
+          "tiplabels_aminoacid_bar.csv", 
+          row.names = FALSE, quote = FALSE)
+
+# Combine the two files, retaining the order from 1-167. Save the data. 
+# Load your dataset
+df <- read_csv("test_plot.csv")  # Replace with your actual file path
+
+df <- df %>%
+  mutate(
+    NA_y = row_number(),  # y-position for label_1
+    AA_y = match(label_1, label_2)  # y-position for same sample in label_2
+  )
+
+# Build long format for ggplot
+long_df <- df %>%
+  select(ID = NA_y, sample = label_1, NA_y, AA_y) %>%
+  pivot_longer(cols = c(NA_y, AA_y), names_to = "tree", values_to = "y") %>%
+  mutate(x = ifelse(tree == "NA_y", 1, 2))
+
+ggplot(long_df, aes(x = x, y = y, group = ID)) +
+  +     geom_line(alpha = 0.5, colour = "steelblue", linewidth = 0.3) +
+  +     geom_text(aes(label = sample), 
+                  +               hjust = ifelse(long_df$x == 1, 1.1, -0.1), 
+                  +               size = 1.5, check_overlap = TRUE) +
+  +     scale_x_continuous(breaks = c(1, 2), labels = c("NA tree", "AA tree")) +
+  +     scale_y_reverse() +
+  +     theme_void() +
+  +     ggtitle("Sample Order Rearrangement Between Nucleic Acid and Amino Acid Trees")
+plot(p)
+
+# Save
+ggsave("sample_rearrangement_plot.svg"
+
+
