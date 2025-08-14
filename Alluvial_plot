@@ -1,0 +1,132 @@
+##Creation of an Alluvial_plot that contains the relationship between the sample name, host, continent and clade assignment. 
+setwd(set/path/to/WorkingDirectory)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(patchwork)
+
+# 1. Load metadata. This should contain a list of the sample names, the host it was collected from, the country it was collected from and the clade it was assigned to based on concatenated mtDNA genes. 
+df <- read.delim("Sample_metadata_heatmap.txt", stringsAsFactors = FALSE)
+
+# 2. Clean country/host strings
+df$Country <- trimws(df$Country)
+df$Country <- gsub("UK", "United Kingdom", df$Country)
+df$Country <- gsub("Korea", "South Korea", df$Country, ignore.case = TRUE)
+df$Host <- tolower(trimws(df$Host))
+
+# 3. Map countries to continents
+df$Continent <- case_when(
+  df$Country %in% c("Ethiopia", "Uganda", "Kenya", "Tanzania") ~ "Africa",
+  df$Country %in% c("China", "South Korea", "Philippines", "Thailand") ~ "Asia",
+  df$Country %in% c("Denmark", "Hungary", "Germany" , "United Kingdom") ~ "Europe",
+  TRUE ~ "Unspecified"
+)
+
+# 4. Collapse subclades to major clades: A, B, C, D
+df$Clade <- gsub("^([A-D])[0-9]*$", "\\1", df$All_Genes)
+
+## 5. Generate individual plots if required
+
+# A. Sample count by Continent
+p1 <- ggplot(df, aes(x = Continent)) +
+  geom_bar(fill = "steelblue") +
+  theme_minimal() +
+  labs(title = "Samples by Continent", x = "Continent", y = "Count") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+# B. Sample count by Host
+p2 <- ggplot(df, aes(x = Host)) +
+  geom_bar(fill = "coral") +
+  theme_minimal() +
+  labs(title = "Samples by Host", x = "Host", y = "Count") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+# C. Sample count by Clade
+p3 <- ggplot(df, aes(x = Clade)) +
+  geom_bar(fill = "seagreen") +
+  theme_minimal() +
+  labs(title = "Samples by Mitochondrial Clade", x = "Clade", y = "Count")
+
+# 6. Combine plots using patchwork
+combined_plot <- (p1 | p2 | p3) +
+  plot_layout(guides = "collect") +
+  plot_annotation(title = "Sample Metadata Summary")
+
+# 7. Display
+print(combined_plot)
+
+# 8. Optional: save to file
+ggsave("sample_metadate.png", combined_plot, width = 12, height = 5)
+
+library(ggplot2)
+install.packages("ggalluvial") 
+library(ggalluvial)
+
+
+df %>%
+  count(Host, Clade, Continent) %>%
+  ggplot(aes(x = Clade, y = Host, fill = n)) +
+  geom_tile(color = "white") +
+  facet_wrap(~Continent) +
+  scale_fill_viridis_c(option = "plasma") +
+  labs(title = "Sample Distribution by Clade, Host, and Continent", fill = "Count") +
+  theme_minimal()
+  
+#-------
+# Alluvial plot
+# Prepare data
+df_alluvial <- df %>%
+  count(Continent, Host, Clade) %>%
+  filter(!is.na(Continent) & !is.na(Host) & !is.na(Clade))
+
+df_alluvial$Host <- factor(df_alluvial$Host,
+                           levels = c("human", "pig", "sheep", "non-human primate", "unspecified")
+)
+
+#  Plot graph
+p <- ggplot(df_alluvial,
+            aes(axis1 = Continent, axis2 = Host, axis3 = Clade, y = n)) +
+  geom_alluvium(aes(fill = Continent), alpha = 0.8, knot.pos = 0.4, curve_type = "cubic") +
+  geom_stratum(width = 0.3, fill = "white", colour = "grey40") +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)),
+            size = 3, family = "sans", colour = "black") +
+  scale_x_discrete(
+    limits = c("Continent", "Host", "Clade"),
+    expand = c(0.05, 0.05),
+    position = "top"
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Africa" = "#A6CEE3",       # pastel blue
+      "Asia" = "#FDBF6F",         # pastel orange
+      "Europe" = "#B2DF8A",       # pastel green
+      "Unspecified" = "#CAB2D6"   # pastel purple
+    ),
+    name = "Continent:"
+  ) +
+  labs(
+    title = "Sample Flow Across Continent, Host, and Clade",
+    y = "Number of Samples"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank(),
+    plot.title = element_text(hjust = 0.5, size = 13, face = "bold"),
+    legend.position = "bottom",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10),
+    axis.text.x.top = element_text(size = 11, face = "bold", margin = margin(t = 0.2)),
+    plot.margin = margin(6, 6, 6, 6)
+  )
+
+# Print plot
+print(p)
+
+# Save as PNG (larger height to fit labels)
+ggsave("Alluvial_Continent_Host_Clade_.png",
+       plot = p, width = 10, height = 12, dpi = 600, bg = "white")
+
+
+
