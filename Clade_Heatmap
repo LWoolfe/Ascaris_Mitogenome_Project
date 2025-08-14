@@ -1,0 +1,66 @@
+##Creation of a heatmap to show the clade assignments for each gene per sample. 
+
+setwd("S:/Research/Lauren_Ascaris_2/mtDNA_mitoz_mitos_analyses/Mitogenome paper")
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(tidyverse)
+
+#Create a file from each phylogenomic tree which contains the sample ID, and clade assignment for each gene. 
+# Load data
+df <- read.delim("Sample_fnn_data.txt", stringsAsFactors = FALSE)
+df$label <- factor(df$label, levels = df$label)
+
+df_long <- df %>%
+  pivot_longer(cols = -label, names_to = "Gene", values_to = "Clade")
+df_long$Clade <- gsub("^([A-D])[0-9]+$", "\\1", df_long$Clade)
+df_long$Gene[df_long$Gene %in% c("", " ", NA)] <- "Spacer"
+
+# Define gene order
+gene_order <- c("Concatenation", "Spacer", 
+                "nad1", "atp6", "nad2", "cob", "cox3", 
+                "nad4", "cox1", "cox2", "nad3", "nad5", "nad6", "nad4L")
+
+# Set factor levels
+df_long$Gene <- factor(df_long$Gene, levels = gene_order)
+levels(df_long$Gene)[levels(df_long$Gene) == "Spacer"] 
+
+# Plot
+p <- ggplot(df_long, aes(x = Gene, y = label, fill = Clade)) +
+  geom_tile(color = "white") +
+  scale_fill_manual(
+    values = c(
+      "A" = "#7FBFE8",
+      "B" = "#FDD9A0",
+      "C" = "#117733",
+      "D" = "#DE89A1"
+    ),
+    drop = FALSE
+  ) +
+  labs(
+    title = "Sample Clade Assignments",
+    x = "Gene",
+    y = "Sample"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text.y = element_text(size = 6),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid = element_blank(),
+    legend.position = "right",
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 13),  
+    plot.margin = margin(10, 10, 10, 10)
+  ) +
+  guides(fill = guide_legend(title = "Clade")) +
+  scale_y_discrete(expand = expansion(mult = c(0.01, 0.01)))  
+
+# Print plot
+plot(p)
+
+# Save as SVG (A4 size)
+ggsave("clade_assignments_plot.svg", plot = p, width = 8.27, height = 14, units = "in", dpi = 300)
+
+# Save as PNG (A4 size)
+ggsave("clade_assignments_plot.png", plot = p, width = 8.27, height = 14, units = "in", dpi = 300)
