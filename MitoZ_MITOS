@@ -1,0 +1,35 @@
+# Install MitoZ
+
+conda create -n mitoz -c bioconda -c conda-forge mitoz=3.6
+conda activate mitoz
+circos --modules
+mitoz
+mitoz-tools
+
+python3
+from ete3 import NCBITaxa
+ncbi = NCBITaxa()
+exit()
+
+from ete3 import NCBITaxa
+a = NCBITaxa()
+a.get_name_translator(["Arthropoda"])
+{'Arthropoda': [6656]}
+
+# Example run using MitoZ
+
+mitoz all  \
+--outprefix ascaris_mito_05M \
+--thread_number 4 \
+--clade Nematoda \
+--genetic_code 5 \
+--species_name "Ascaris" \
+--fq1 Trento_Ascaris_S7_R1_20M.fastq.gz \
+--fq2 Trento_Ascaris_S7_R1_20M.fastq.gz \
+--fastq_read_length 151 \
+--data_size_for_mt_assembly 3,0 \
+--assembler megahit \
+--kmers_megahit 39 51 71 99 \
+--memory 32 \
+
+--requiring_taxa Nematoda
