@@ -1,0 +1,138 @@
+## Initial processing of all files before decontamination/assembly
+
+# 1. Download SRA from a predefined list (in batches) using the cluster
+# ----------------
+
+#!/bin/bash
+#SBATCH --partition=shared
+#SBATCH --job-name=sra_tst_00
+#SBATCH --cpus-per-task=8
+#SBATCH --time=100:00:00
+#SBATCH --mem=100G
+#SBATCH --output=sra_dl.%A.%a.out
+
+set -Eeo pipefail
+
+source ~/.bashrc
+conda activate SRA_tools 
+
+OUTDIR="/parallel_scratch/lw01165/sra_files"
+LISTFILE="${LISTFILE:-/parallel_scratch/lw01165/ids.part.00}"
+THREADS=4
+
+# normalise LISTFILE to absolute in case a leading "/" is missing
+case "$LISTFILE" in
+  /*) ;; 
+  *) LISTFILE="/$LISTFILE" ;;
+esac
+
+# sanity check
+[[ -r "$LISTFILE" ]] || { echo "ERROR: cannot read LISTFILE: $LISTFILE" >&2; exit 1; }
+
+# dirs
+mkdir -p "$OUTDIR" "$OUTDIR/_tmp"
+export TMPDIR="$OUTDIR/_tmp"
+
+cd "$OUTDIR"
+
+echo "Starting download batch from $LISTFILE"
+
+# read each accession, stripping any CR and skipping blanks
+while IFS= read -r SRR; do
+  SRR="${SRR%$'\r'}"
+  [[ -z "${SRR//[[:space:]]/}" ]] && continue
+  echo ">>> Processing $SRR"
+
+  # Skip if already done (paired or single)
+  if [[ -s "${SRR}_1.fastq.gz" || -s "${SRR}.fastq.gz" ]]; then
+    echo "$SRR already done, skipping."
+    continue
+  fi
+
+  # 1) Download SRA directly into OUTDIR (flat)
+  if ! prefetch "$SRR" --max-size 100G --output-file "${OUTDIR}/${SRR}.sra"; then
+    echo "$SRR prefetch failed ❌"
+    continue
+  fi
+
+  # 2) Convert to FASTQ (handles paired/single automatically)
+  if ! fasterq-dump "${OUTDIR}/${SRR}.sra" -O "$OUTDIR" -e "$THREADS" -p --split-files -t "$TMPDIR"; then
+    echo "$SRR fasterq-dump failed ❌"
+    continue
+  fi
+
+  # 3) Compress (pigz if available)
+  if command -v pigz >/dev/null 2>&1; then
+    pigz -p "$THREADS" "${OUTDIR}/${SRR}"*.fastq
+  else
+    gzip -f "${OUTDIR}/${SRR}"*.fastq
+  fi
+
+  # 4) Remove .sra to save space
+  rm -f "${OUTDIR}/${SRR}.sra"
+
+  echo "✅ Finished $SRR"
+done < "$LISTFILE"
+
+echo "🎉 All done for $(basename "$LISTFILE")"
+
+conda deactivate
+
+# 2. Performing QC and subsampling to 20M (straight command line, not using cluster) 
+# ----------------
+
+#!/bin/bash
+set -Eeo pipefail
+
+# FastQC on downloaded files
+conda activate fastqc
+fastqc *.fastq.gz
+conda deactivate
+
+# Fastp processing
+conda activate fastp_env
+for file in *_1.fastq.gz; do
+    base_name=$(basename "$file" "_1.fastq.gz")
+    pair_file="${base_name}_2.fastq.gz"
+
+    if [[ -f "$pair_file" ]]; then
+        echo "Processing $base_name..."
+        fastp -i "$file" -I "$pair_file" \
+              -o "${base_name}_R1_filtered.fastq.gz" \
+              -O "${base_name}_R2_filtered.fastq.gz" \
+              --length_required 50
+        echo "Completed processing $base_name"
+    else
+        echo "Missing paired 2 file for $base_name. Skipping..."
+    fi
+done
+
+conda deactivate
+
+# Subsampling
+conda activate seqtk
+for R1_filtered in *_R1_filtered.fastq.gz; do
+    base_name=$(basename "$R1_filtered" "_R1_filtered.fastq.gz")
+    R2_filtered="${base_name}_R2_filtered.fastq.gz"
+
+    if [[ -f "$R2_filtered" ]]; then
+        seqtk sample -s410 "$R1_filtered" 20000000 > "${base_name}_R1_20M.fastq" && \
+        seqtk sample -s410 "$R2_filtered" 20000000 > "${base_name}_R2_20M.fastq"
+        echo "Subsampling completed for $base_name"
+    else
+        echo "Missing paired file for $base_name. Skipping subsampling."
+    fi
+done
+
+# Compress subsampled files
+echo "Compressing subsampled files..."
+pigz -p 6 *_20M.fastq
+conda deactivate
+
+# FastQC on subsampled files
+conda activate fastqc
+fastqc *_20M.fastq.gz
+multiqc*
+conda deactivate
+
+
