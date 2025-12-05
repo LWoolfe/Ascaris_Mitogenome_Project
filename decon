@@ -1,0 +1,2 @@
+
+deacon filter ascarids_mtDNA.idx Nanook_worm1_R1_20M.fastq.gz Nanook_worm1_R2_20M.fastq.gz -o Nanook_worm1_R1_20M_mtDNA.fastq.gz -O Nanook_worm1_R2_20M_mtDNA.fastq.gz
