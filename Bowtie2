@@ -1,0 +1,9 @@
+#0. Host depletion using Bowtie2/SqueezeMeta. (For reference creation, see Deacon)
+
+#1. Bowtie2 depletion of host DNA reads (fastq.gz files in folder "fastq")
+
+sqm_mapper.pl -r human_pig_genome.fna -s SRRxxx.samples -f fastq -o SRRxxx_bowtie2 --filter -t 24
+
+Example content SqueezeMeta samples file:
+SRRxxx SRRxxx_R1_20M.fastq.gz pair1
+SRRxxx SRRxxx_R2_20M.fastq.gz pair2
