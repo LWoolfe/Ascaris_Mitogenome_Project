@@ -1,4 +1,6 @@
-# Install MitoZ
+# 0. Example commands when using MitoZ/MitoS2
+
+# 1. Install MitoZ
 
 conda create -n mitoz -c bioconda -c conda-forge mitoz=3.6
 conda activate mitoz
@@ -16,20 +18,39 @@ a = NCBITaxa()
 a.get_name_translator(["Arthropoda"])
 {'Arthropoda': [6656]}
 
-# Example run using MitoZ
+# 2. MitoZ assembly of mitogenomes with unfiltered reads (memory and thread_number dependent on
+availability of cores and memory). Note, inbetween new assemblies in same folder, perform command "rm -
+rf clean_data mt_assembly mt_annotation mitoz.log"):
 
-mitoz all  \
---outprefix ascaris_mito_05M \
---thread_number 4 \
---clade Nematoda \
---genetic_code 5 \
---species_name "Ascaris" \
---fq1 Trento_Ascaris_S7_R1_20M.fastq.gz \
---fq2 Trento_Ascaris_S7_R1_20M.fastq.gz \
---fastq_read_length 151 \
---data_size_for_mt_assembly 3,0 \
---assembler megahit \
---kmers_megahit 39 51 71 99 \
---memory 32 \
+# 2.1 20M subsampled:
+mitoz all --outprefix SRRxxx_20M_mitoz --thread_number 6 --clade Nematoda --genetic_code 5 --
+species_name "Ascaris" --fq1 SRRxxx_R1_20M. fastq.gz --fq2 SRRxxx_R2_20M. fastq.gz --
+fastq_read_length 151 --data_size_for_mt_assembly 0.5,0 --assembler megahit --kmers_megahit 29
+39 59 79 99 119 --memory 44 --requiring_taxa Nematoda
 
---requiring_taxa Nematoda
+# 2.2 mtDNA reads filtered:
+mitoz all --outprefix SRRxxx_mtDNA_mitoz --thread_number 6 --clade Nematoda --genetic_code 5 --
+species_name "Ascaris" --fq1 SRRxxx_R1_20M_mtDNA.fastq.gz --fq2
+SRRxxx_R2_20M_mtDNA.fastq.gz --fastq_read_length 151 --data_size_for_mt_assembly 0.1,0 --
+assembler megahit --kmers_megahit 29 39 59 79 99 119 --memory 44 --requiring_taxa Nematoda
+
+# 2.3 host DNA reads depleted with Deacon:
+mitoz all --outprefix SRRxxx_deacon_mitoz --thread_number 6 --clade Nematoda --genetic_code 5 --
+species_name "Ascaris" --fq1 SRRxxx_R1_20M_deacon.fastq.gz --fq2
+SRRxxx_R2_20M_deacon.fastq.gz --fastq_read_length 151 --data_size_for_mt_assembly 0.5,0 --
+assembler megahit --kmers_megahit 29 39 59 79 99 119 --memory 44 --requiring_taxa Nematoda
+
+# 2.4 host DNA reads depleted with Bowtie2:
+mitoz all --outprefix SRRxxx_bowtie_mitoz --thread_number 6 --clade Nematoda --genetic_code 5 --
+species_name "Ascaris" --fq1 SRRxxx_R1_20M_bowtie.fastq.gz --fq2 SRRxxx_R2_20M_bowtie.fastq.gz
+--fastq_read_length 151 --data_size_for_mt_assembly 0.5,0 --assembler megahit --kmers_megahit 29
+39 59 79 99 119 --memory 44 --requiring_taxa Nematoda
+
+# 3. Mitos2 annotation of mitogenome assemblies, using the standard and ncbicode start/stop settings:
+mkdir SRRxxx_mtDNA_mitos_standard
+runmitos.py -c 5 -o SRRxxx_mtDNA_mitos_standard --linear -R refseq -r refseq63m -i SRRxxx_mtDNA.fna --
+best --noplots
+
+mkdir SRRxxx_mtDNA_mitos_ncbicode
+runmitos.py -c 5 -o SRRxxx_mtDNA_mitos_ncbicode --linear -R refseq -r refseq63m -i SRRxxx_mtDNA.fna --
+best --noplots --ncbicode
