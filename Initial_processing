@@ -1,4 +1,16 @@
 ## Initial processing of all files before decontamination/assembly
+# ---------------- 
+
+# 0. Packages used (installed via Conda or per instructions from github page):
+# ----------------
+sra-tools (for prefetch and fasterq-dump): conda install -c bioconda sra-tools
+pigz (for faster gzip compression): https://github.com/madler/pigz
+seqtk (for subsampling): https://github.com/lh3/seqtk
+deacon (for filtering mtDNA/depleting host DNA reads): conda install -c bioconda deacon
+SqueezeMeta (for bowtie2-script): conda create -n SqueezeMeta -c conda-forge -c bioconda -c fpusan
+squeezemeta=1.6.5 --no-channel-priority --override-channels
+mitoz (for assembly of mtDNA)
+mitos2 (for annotation of mtDNA genomes)
 
 # 1. Download SRA from a predefined list (in batches) using the cluster
 # ----------------
