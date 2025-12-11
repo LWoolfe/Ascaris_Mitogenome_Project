@@ -1,0 +1,25 @@
+#0. The following script contains examples of how Deacon was used for Host depletion or MtDNA enrichment
+
+#1. Deacon depletion of host DNA reads:
+HUM_URL="https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.fna.gz"
+PIG_URL="https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/003/025/GCF_000003025.6_Sscrofa11.1/GCF_000003025.6_Sscrofa11.1_genomic.fna.gz"
+ echo "==> Downloading human FASTA (.gz)…"
+
+wget -c "$HUM_URL" -O human.fna
+wget -c "$PIG_URL" -O pig.fna
+
+cat human.fna pig.fna > human_pig_genome.fna
+
+deacon index build human_pig_genome.fna > human_pig_genome_v3.idx
+deacon filter -d human_pig_genome_v3.idx SRRxxx_R1_20M.fastq.gz SRRxxx_R2_20M.fastq.gz -o
+SRRxxx_R1_20M_deacon.fastq.gz -O SRRxxx_R2_20M_deacon.fastq.gz --compression-level 6 --
+compression-threads 3 --threads 7
+
+2. #1. Deacon filtering of mtDNA reads:
+#the index was created using the same script as above, using the accessions: AP017677.1, HQ704900.1, KY045803.1, SRR31757522, SRR31757533, AP017696.1, KC839986.1, NC_001327, HQ704901.1, KY045800.1, KY045804.1, NC_016200, MW560284.1
+
+deacon index build Ascarids_mtDNA.fna > ascarids_mtdna.idx
+
+deacon filter ascarids_mtdna.idx SRRxxx_R1_20M.fastq.gz SRRxxx_R2_20M.fastq.gz -o
+SRRxxx_R1_20M_mtDNA.fastq.gz -O SRRxxx_R2_20M_mtDNA.fastq.gz --compression-level 6 --
+compression-threads 3 --threads 7
