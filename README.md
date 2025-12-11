@@ -6,13 +6,14 @@ Our approach yielded 154 high-quality Ascaris mtDNA assemblies and enabled the  
 
 A) Bioinformatic Processing: 
 1. Initial Processing
-2. Host decontamination with bowtie2
-3. Host decontamination with deacon
-4. mtDNA enrichment with deacon
+2. Using Deacon
+3. Using Bowtie2/SqueezeMeta
 5. Assembly with mitoZ and annotation with MITOS2
 
 A) Data analysis using R: 
 1. Alluvial Plot
 2. Tree_analysis
 3. Clade heatmap
-4. Tanglegram 
+4. Tanglegram
+   
+[lauren_mtDNA_commands_used.txt](https://github.com/user-attachments/files/24103144/lauren_mtDNA_commands_used.txt)
